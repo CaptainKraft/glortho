@@ -9,12 +9,12 @@ typedef struct {
 
 const char* vert_shader_source = "#version 330 core\n"
                                  "layout (location = 0) in vec2 in_pos;\n"
-                                 "out vec4 vert_color;\n"
                                  "uniform mat4 proj;\n"
+                                 "uniform mat4 scale;\n"
+                                 "out vec4 vert_color;\n"
                                  "void main()\n"
                                  "{\n"
-                                 "   gl_Position = vec4(in_pos.x, in_pos.y, 0.0f, 1.0f);\n"
-                                 "   //gl_Position = proj * vec4(in_pos.x, in_pos.y, 0.0f, 1.0f);\n"
+                                 "   gl_Position = proj * vec4(in_pos.x, in_pos.y, 0.0f, 1.0f);\n"
                                  "}\0";
 const char* frag_shader_source = "#version 330 core\n"
                                  "out vec4 frag_color;\n"
@@ -93,8 +93,8 @@ int main()
         float right = window_w;
         float bot = window_h;
         float top = 0.0f;
-        float near_plane = 0.1f;
-        float far_plane = 10.0f;
+        float near_plane = -1.0f;
+        float far_plane = 1.0f;
 
         ortho[0] = 2.0f / (right - left);
         ortho[5] = 2.0f / (top - bot);
@@ -104,9 +104,18 @@ int main()
         ortho[7] = (bot + top) / (bot - top);
         ortho[11] = (far_plane + near_plane) / (near_plane - far_plane);
 
+        float scale[16] = {};
+        scale[0] = 1.0f;
+        scale[5] = 1.0f;
+        scale[10] = 1.0f;
+        scale[15] = 1.0f;
+
         // NOTE: if I let the shader multiply the projection matrix, the result is wrong
+        glUseProgram(quad_shader);
         uint32_t proj_loc = glGetUniformLocation(quad_shader, "proj");
-        glUniformMatrix4fv(proj_loc, 1, GL_FALSE, ortho);
+        glUniformMatrix4fv(proj_loc, 1, GL_TRUE, ortho);
+        uint32_t scale_loc = glGetUniformLocation(quad_shader, "scale");
+        glUniformMatrix4fv(scale_loc, 1, GL_TRUE, scale);
 
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -120,27 +129,6 @@ int main()
             {100.0f, 100.0f}, // right bot
         };
 
-        // NOTE: if I do the multiplication myself, the result is correct
-        for (int i = 0; i < 6; i++) {
-            float x = vertices[i].position[0];
-            float y = vertices[i].position[1];
-            float z = 0.0f;
-            float w = 1.0f;
-            float vec[4] = {x, y, z, w};
-            float res[4] = {};
-
-            for (int col = 0; col < 4; col++) {
-                for (int row = 0; row < 4; row++) {
-                    int idx = col * 4 + row;
-                    res[col] += (ortho[idx] * vec[row]);
-                }
-            }
-
-            vertices[i].position[0] = res[0];
-            vertices[i].position[1] = res[1];
-        }
-
-        glUseProgram(quad_shader);
         glBindVertexArray(quad_vao);
         glBindBuffer(GL_ARRAY_BUFFER, quad_vbo);
         glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(Vertex), vertices, GL_DYNAMIC_DRAW);
