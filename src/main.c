@@ -110,7 +110,6 @@ int main()
         scale[10] = 1.0f;
         scale[15] = 1.0f;
 
-        // NOTE: if I let the shader multiply the projection matrix, the result is wrong
         glUseProgram(quad_shader);
         uint32_t proj_loc = glGetUniformLocation(quad_shader, "proj");
         glUniformMatrix4fv(proj_loc, 1, GL_TRUE, ortho);
